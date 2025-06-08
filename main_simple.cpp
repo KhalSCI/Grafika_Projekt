@@ -31,6 +31,7 @@ Camera camera;  // Add camera instance
 double lastTime = 0.0;
 GLuint barkTex;
 GLuint leafTex;
+GLuint grassTex;
 
 GLuint readTexture(const char* filename) {
    GLuint tex;
@@ -126,6 +127,7 @@ void initOpenGLProgram(GLFWwindow* window) {
     tree.generate();
     barkTex = readTexture("bark.png");
     leafTex = readTexture("leaf.png");
+    grassTex = readTexture("grass.png");
 }
 
 // Cleanup
@@ -173,11 +175,13 @@ void drawScene(GLFWwindow* window, float time) {
     float sun_angle = sun_speed * (float)glfwGetTime();
     // Sun moves in a circular path above the scene
     glm::vec3 sunPos = glm::vec3(sun_radius * cos(sun_angle), sun_height, sun_radius * sin(sun_angle));
-    glm::vec3 sunColor = glm::vec3(2.0f, 1.8f, 1.5f); // more natural, not too strong
     glUniform3fv(sp->u("lightPos"), 1, glm::value_ptr(sunPos));
-    glUniform3fv(sp->u("lightColor"), 1, glm::value_ptr(sunColor));
-    glm::vec3 camPos = camera.getPosition();
-    glUniform3fv(sp->u("viewPos"), 1, glm::value_ptr(camPos));
+    
+    // Set up texture samplers
+    glUniform1i(sp->u("textureMap0"), 0); // Bark texture on unit 0
+    glUniform1i(sp->u("textureMap1"), 1); // Leaf texture on unit 1
+    glUniform1i(sp->u("textureMap2"), 2); // Grass texture on unit 2
+    
     // Debug: Print sun position and light position every second
     static double lastSunDebug = 0.0;
     if (currentTime - lastSunDebug > 1.0) {
@@ -191,6 +195,7 @@ void drawScene(GLFWwindow* window, float time) {
     glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(sunModel));
     glUniform1i(sp->u("useBarkTex"), 0);
     glUniform1i(sp->u("useLeafTex"), 0);
+    glUniform1i(sp->u("useGroundTex"), 0);
     int sunPosAttrib = sp->a("vertex");
     int sunNormAttrib = sp->a("normal");
     if (sunPosAttrib >= 0) {
@@ -213,6 +218,7 @@ void drawScene(GLFWwindow* window, float time) {
     glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(groundModel));
     glUniform1i(sp->u("useBarkTex"), 0);
     glUniform1i(sp->u("useLeafTex"), 0);
+    glUniform1i(sp->u("useGroundTex"), 1); // Use ground texture
     int groundPosAttrib = sp->a("vertex");
     int groundNormAttrib = sp->a("normal");
     if (groundPosAttrib >= 0) {
@@ -229,13 +235,18 @@ void drawScene(GLFWwindow* window, float time) {
     glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
     // --- END DRAW GROUND CUBE ---
 
-    // Bind bark texture to texture unit 0
+    // Bind all textures at once
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, barkTex);
-    glUniform1i(sp->u("barkTex"), 0); // Set the sampler uniform to use texture unit 0
-    glUniform1i(sp->u("leafTex"), 1); // Set the sampler uniform to use texture unit 1
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, leafTex);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, grassTex);
+
+    // Render tree branches with bark texture
     glUniform1i(sp->u("useBarkTex"), 1); // Use bark texture
     glUniform1i(sp->u("useLeafTex"), 0); // Not using leaf texture
+    glUniform1i(sp->u("useGroundTex"), 0); // Not using ground texture
     // Set up attributes: position (4), texcoord (2), normal (3)
     const std::vector<GLfloat>& branchVerts = tree.getBranchVertices();
     int stride = 9 * sizeof(GLfloat);
@@ -260,12 +271,9 @@ void drawScene(GLFWwindow* window, float time) {
     if (normAttrib >= 0) glDisableVertexAttribArray(normAttrib);
 
     // Render tree leaves (9 floats per vertex: position + texcoord + normal)
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, leafTex);
-    glUniform1i(sp->u("barkTex"), 0); // Ensure barkTex is set (even if not used)
-    glUniform1i(sp->u("leafTex"), 1);
     glUniform1i(sp->u("useBarkTex"), 0);
     glUniform1i(sp->u("useLeafTex"), 1);
+    glUniform1i(sp->u("useGroundTex"), 0);
     const std::vector<GLfloat>& leafVerts = tree.getLeafVertices();
     if (posAttrib >= 0) {
         glEnableVertexAttribArray(posAttrib);
