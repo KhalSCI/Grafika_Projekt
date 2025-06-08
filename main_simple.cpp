@@ -32,6 +32,24 @@ double lastTime = 0.0;
 GLuint barkTex;
 GLuint leafTex;
 GLuint grassTex;
+GLuint sunTex;
+
+// Custom ground normals - all pointing up for proper lighting
+float groundNormals[] = {
+    // All 36 vertices get upward normals (0, 1, 0)
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 1
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 2
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 3
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 4
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 5
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 6
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 7
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 8
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 9
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 10
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 11
+    0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f   // Triangle 12
+};
 
 GLuint readTexture(const char* filename) {
    GLuint tex;
@@ -127,7 +145,8 @@ void initOpenGLProgram(GLFWwindow* window) {
     tree.generate();
     barkTex = readTexture("bark.png");
     leafTex = readTexture("leaf.png");
-    grassTex = readTexture("grass.png");
+    grassTex = readTexture("grass3.png");
+    sunTex = readTexture("sun_yellow.png");
 }
 
 // Cleanup
@@ -177,10 +196,21 @@ void drawScene(GLFWwindow* window, float time) {
     glm::vec3 sunPos = glm::vec3(sun_radius * cos(sun_angle), sun_height, sun_radius * sin(sun_angle));
     glUniform3fv(sp->u("lightPos"), 1, glm::value_ptr(sunPos));
     
-    // Set up texture samplers
+    // Set up texture samplers and bind all textures at once
     glUniform1i(sp->u("textureMap0"), 0); // Bark texture on unit 0
     glUniform1i(sp->u("textureMap1"), 1); // Leaf texture on unit 1
     glUniform1i(sp->u("textureMap2"), 2); // Grass texture on unit 2
+    glUniform1i(sp->u("textureMap3"), 3); // Sun texture on unit 3
+    
+    // Bind all textures at once for all objects
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, barkTex);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, leafTex);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, grassTex);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, sunTex);
     
     // Debug: Print sun position and light position every second
     static double lastSunDebug = 0.0;
@@ -196,11 +226,18 @@ void drawScene(GLFWwindow* window, float time) {
     glUniform1i(sp->u("useBarkTex"), 0);
     glUniform1i(sp->u("useLeafTex"), 0);
     glUniform1i(sp->u("useGroundTex"), 0);
+    glUniform1i(sp->u("useSunTex"), 1); // Use sun texture
+    
     int sunPosAttrib = sp->a("vertex");
+    int sunTexAttrib = sp->a("texcoord");
     int sunNormAttrib = sp->a("normal");
     if (sunPosAttrib >= 0) {
         glEnableVertexAttribArray(sunPosAttrib);
         glVertexAttribPointer(sunPosAttrib, 4, GL_FLOAT, false, 0, myCubeVertices);
+    }
+    if (sunTexAttrib >= 0) {
+        glEnableVertexAttribArray(sunTexAttrib);
+        glVertexAttribPointer(sunTexAttrib, 2, GL_FLOAT, false, 0, myCubeTexCoords);
     }
     if (sunNormAttrib >= 0) {
         glEnableVertexAttribArray(sunNormAttrib);
@@ -208,6 +245,7 @@ void drawScene(GLFWwindow* window, float time) {
     }
     glDrawArrays(GL_TRIANGLES, 0, myCubeVertexCount);
     if (sunPosAttrib >= 0) glDisableVertexAttribArray(sunPosAttrib);
+    if (sunTexAttrib >= 0) glDisableVertexAttribArray(sunTexAttrib);
     if (sunNormAttrib >= 0) glDisableVertexAttribArray(sunNormAttrib);
     glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
     // --- END DRAW SUN CUBE ---
@@ -219,34 +257,34 @@ void drawScene(GLFWwindow* window, float time) {
     glUniform1i(sp->u("useBarkTex"), 0);
     glUniform1i(sp->u("useLeafTex"), 0);
     glUniform1i(sp->u("useGroundTex"), 1); // Use ground texture
+    glUniform1i(sp->u("useSunTex"), 0); // Not using sun texture
     int groundPosAttrib = sp->a("vertex");
+    int groundTexAttrib = sp->a("texcoord");
     int groundNormAttrib = sp->a("normal");
     if (groundPosAttrib >= 0) {
         glEnableVertexAttribArray(groundPosAttrib);
         glVertexAttribPointer(groundPosAttrib, 4, GL_FLOAT, false, 0, myCubeVertices);
     }
+    if (groundTexAttrib >= 0) {
+        glEnableVertexAttribArray(groundTexAttrib);
+        glVertexAttribPointer(groundTexAttrib, 2, GL_FLOAT, false, 0, myCubeTexCoords);
+    }
     if (groundNormAttrib >= 0) {
         glEnableVertexAttribArray(groundNormAttrib);
-        glVertexAttribPointer(groundNormAttrib, 3, GL_FLOAT, false, 0, myCubeNormals);
+        glVertexAttribPointer(groundNormAttrib, 3, GL_FLOAT, false, 0, groundNormals);
     }
     glDrawArrays(GL_TRIANGLES, 0, myCubeVertexCount);
     if (groundPosAttrib >= 0) glDisableVertexAttribArray(groundPosAttrib);
+    if (groundTexAttrib >= 0) glDisableVertexAttribArray(groundTexAttrib);
     if (groundNormAttrib >= 0) glDisableVertexAttribArray(groundNormAttrib);
     glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
     // --- END DRAW GROUND CUBE ---
-
-    // Bind all textures at once
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, barkTex);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, leafTex);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, grassTex);
 
     // Render tree branches with bark texture
     glUniform1i(sp->u("useBarkTex"), 1); // Use bark texture
     glUniform1i(sp->u("useLeafTex"), 0); // Not using leaf texture
     glUniform1i(sp->u("useGroundTex"), 0); // Not using ground texture
+    glUniform1i(sp->u("useSunTex"), 0); // Not using sun texture
     // Set up attributes: position (4), texcoord (2), normal (3)
     const std::vector<GLfloat>& branchVerts = tree.getBranchVertices();
     int stride = 9 * sizeof(GLfloat);
@@ -274,6 +312,7 @@ void drawScene(GLFWwindow* window, float time) {
     glUniform1i(sp->u("useBarkTex"), 0);
     glUniform1i(sp->u("useLeafTex"), 1);
     glUniform1i(sp->u("useGroundTex"), 0);
+    glUniform1i(sp->u("useSunTex"), 0); // Not using sun texture
     const std::vector<GLfloat>& leafVerts = tree.getLeafVertices();
     if (posAttrib >= 0) {
         glEnableVertexAttribArray(posAttrib);

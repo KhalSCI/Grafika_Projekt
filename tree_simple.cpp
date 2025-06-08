@@ -5,12 +5,12 @@
 #include <algorithm>
 
 Tree::Tree() {
-    max_growth_time = 5.0f;  // 120 seconds total growth time
+    max_growth_time = 10.0f;  // 120 seconds total growth time
     current_growth_time = 0.0f;
-    max_generations = 4;
-    branch_angle_variance = 45.0f;
-    length_reduction_factor = 0.75f;  // Less reduction to keep branches more visible
-    radius_reduction_factor = 0.85f;  // Less reduction to keep branches thicker
+    max_generations = 6;
+    branch_angle_variance = 45.0f; // Degrees of variance for branch angles
+    length_reduction_factor = 0.7f;  // Less reduction to keep branches more visible
+    radius_reduction_factor = 0.7f;  // Less reduction to keep branches thicker
 }
 
 Tree::~Tree() {
