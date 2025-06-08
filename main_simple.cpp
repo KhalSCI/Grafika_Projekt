@@ -250,7 +250,7 @@ void drawScene(GLFWwindow* window, float time) {
     glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
     // --- END DRAW SUN CUBE ---
 
-    // --- DRAW GROUND CUBE (STRETCHED, using myCube2.h) ---
+    
     glm::mat4 groundModel = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -2.0f, 0.0f))
         * glm::scale(glm::mat4(1.0f), glm::vec3(8.0f, 2.0f, 8.0f));
     glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(groundModel));
