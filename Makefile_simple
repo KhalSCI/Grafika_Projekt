@@ -1,0 +1,26 @@
+CPPFLAGS=-I/usr/local/include -I.
+LDFLAGS=-L/usr/local/lib 
+LDLIBS=-lglfw -lGL -lGLEW -lGLU -lm
+
+# Use C++11 standard for compatibility
+CXXFLAGS=-Wall -g -std=c++11
+
+# Simple tree demo executable
+tree_demo: main_simple.o tree_simple.o camera.o shaderprogram.o lodepng.o
+	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+main_simple.o: main_simple.cpp tree_simple.h camera.h constants.h shaderprogram.h lodepng.h
+
+tree_simple.o: tree_simple.cpp tree_simple.h
+
+camera.o: camera.cpp camera.h
+
+shaderprogram.o: shaderprogram.cpp shaderprogram.h
+
+lodepng.o: lodepng.cpp lodepng.h
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c lodepng.cpp -o lodepng.o
+
+clean:
+	rm -f *.o tree_demo
+
+.PHONY: clean
