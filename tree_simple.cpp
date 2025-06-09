@@ -4,12 +4,7 @@
 #include <iostream>
 #include <algorithm>
 
-/**
- * Tree Constructor - Initializes the procedural tree generation parameters
- * 
- * This constructor sets up the fundamental parameters that control how the tree
- * will grow both structurally and over time during the animation.
- */
+
 Tree::Tree() {
     // === TIMING PARAMETERS ===
     // Total duration for complete tree growth animation (in seconds)
@@ -69,45 +64,16 @@ void Tree::generate() {
         std::cout << "Generation " << g << ": " << generation_counts[g] << " branches" << std::endl;
     }
     
-    // Debug: Show some branch details
-    std::cout << "Sample branch details:" << std::endl;
-    for (int i = 0; i < std::min(10, (int)branches.size()); i++) {
-        const auto& branch = branches[i];
-        float length = glm::length(branch.end - branch.start);
-        std::cout << "Branch " << i << " - Gen: " << branch.generation 
-                  << ", Length: " << length << ", Radius: " << branch.radius << std::endl;
-    }
+    // // Debug: Show some branch details
+    // std::cout << "Sample branch details:" << std::endl;
+    // for (int i = 0; i < std::min(10, (int)branches.size()); i++) {
+    //     const auto& branch = branches[i];
+    //     float length = glm::length(branch.end - branch.start);
+    //     std::cout << "Branch " << i << " - Gen: " << branch.generation 
+    //               << ", Length: " << length << ", Radius: " << branch.radius << std::endl;
+    // }
 }
 
-/**
- * generateBranch - Core recursive function for procedural tree generation
- * 
- * This function implements the heart of the tree generation algorithm. It creates
- * a single branch and then recursively generates child branches, building up the
- * complete tree structure generation by generation.
- * 
- * === RECURSIVE GENERATION PROCESS ===
- * 1. Create current branch with given parameters
- * 2. Add branch to data structures and link to parent
- * 3. If not at max generation depth, create child branches:
- *    - Generate 2-4 child branches in random directions
- *    - Apply reduction factors to make children smaller/thinner
- *    - Recursively call generateBranch for each child
- * 4. If generation >= 2, add leaves to branch tips
- * 
- * === BRANCH HIERARCHY ===
- * Generation 0: Main trunk (single, thick, vertical)
- * Generation 1: Primary branches (2-4 branches from trunk top)
- * Generation 2: Secondary branches + leaves (smaller, first to get leaves)
- * Generation 3+: Tertiary branches + more leaves (progressively smaller)
- * 
- * @param parent_index Index of parent branch (-1 for trunk/root)
- * @param start Starting position of this branch (world coordinates)
- * @param direction Direction vector (normalized) for branch growth
- * @param length Length of this branch segment
- * @param radius Thickness radius of this branch
- * @param generation Generation level (0=trunk, 1=primary, 2=secondary, etc.)
- */
 void Tree::generateBranch(int parent_index, glm::vec3 start, glm::vec3 direction, 
                          float length, float radius, int generation) {
     // === STEP 1: CREATE CURRENT BRANCH ===
@@ -224,27 +190,6 @@ void Tree::generateBranch(int parent_index, glm::vec3 start, glm::vec3 direction
     }
 }
 
-/**
- * updateGrowth - Advances the tree growth animation over time
- * 
- * This function implements the temporal aspect of tree generation. Rather than
- * showing the complete tree immediately, it gradually reveals branches and leaves
- * over time, creating a realistic growth animation.
- * 
- * === GROWTH ANIMATION STRATEGY ===
- * 1. Generations appear sequentially (trunk first, then branches, then smaller branches)
- * 2. Within each generation, children wait for parents to be partially grown
- * 3. Leaves appear after their parent branches are established
- * 4. Individual elements have staggered timing for organic appearance
- * 
- * === TIMING BREAKDOWN ===
- * - Generation delay: 15% of total time between generations
- * - Growth duration: 40% of total time for each branch to fully grow
- * - Parent dependency: Child branches wait for parent to reach 60% growth
- * - Leaf timing: Appear when parent branch is 40% grown + individual delay
- * 
- * @param delta_time Time elapsed since last update (in seconds)
- */
 void Tree::updateGrowth(float delta_time) {
     // === ADVANCE GLOBAL TIMER ===
     // Accumulate total time elapsed since growth started
@@ -367,21 +312,6 @@ void Tree::updateGrowth(float delta_time) {
     updateLeafMesh();    // Update leaf geometry based on growth_progress
 }
 
-/**
- * calculateAbsoluteBranchStart - Computes world position where a branch begins
- * 
- * In the tree data structure, branch positions are stored relative to their
- * parent branches. This function traverses the parent hierarchy to compute
- * the absolute world position where a branch should start growing.
- * 
- * === POSITION CALCULATION STRATEGY ===
- * - Trunk (parent_index = -1): Uses stored start position (usually origin)
- * - Child branches: Start at the current end position of their parent
- * - The "current end" depends on parent's growth_progress for animation
- * 
- * @param branch_index Index of the branch to calculate start position for
- * @return Absolute world position where this branch starts
- */
 glm::vec3 Tree::calculateAbsoluteBranchStart(int branch_index) {
     // === BOUNDS CHECKING ===
     // Ensure branch index is valid to prevent crashes
@@ -404,23 +334,6 @@ glm::vec3 Tree::calculateAbsoluteBranchStart(int branch_index) {
     return parent_end;
 }
 
-/**
- * calculateAbsoluteBranchEnd - Computes world position where a branch currently ends
- * 
- * This function calculates where a branch's tip is located, taking into account
- * the growth animation. As branches grow, their end position moves from start
- * toward the final end position based on growth_progress.
- * 
- * === ANIMATION INTEGRATION ===
- * - growth_progress = 0.0: Branch end is at start position (invisible)
- * - growth_progress = 0.5: Branch end is halfway to final position
- * - growth_progress = 1.0: Branch end is at final position (fully grown)
- * 
- * This creates the effect of branches extending outward during growth animation.
- * 
- * @param branch_index Index of the branch to calculate end position for
- * @return Current absolute world position where this branch ends
- */
 glm::vec3 Tree::calculateAbsoluteBranchEnd(int branch_index) {
     // === BOUNDS CHECKING ===
     if (branch_index < 0 || branch_index >= static_cast<int>(branches.size())) {
@@ -446,26 +359,6 @@ glm::vec3 Tree::calculateAbsoluteBranchEnd(int branch_index) {
     return absolute_start + current_direction;
 }
 
-/**
- * updateBranchMesh - Generates OpenGL vertex data for all visible branches
- * 
- * This function converts the abstract branch data structures into the specific
- * vertex arrays needed for OpenGL rendering. It only includes branches that
- * have started growing (growth_progress > 0) to implement the growth animation.
- * 
- * === MESH GENERATION PROCESS ===
- * 1. Clear previous vertex data
- * 2. For each branch with growth_progress > 0:
- *    - Calculate current start/end positions (accounting for animation)
- *    - Generate cylindrical geometry with proper radius tapering
- *    - Add vertex data to branch_vertices array
- * 
- * === VERTEX DATA FORMAT ===
- * Each vertex: [x, y, z, w, u, v, nx, ny, nz] (9 floats total)
- * - Position (x,y,z,w): 3D coordinates + homogeneous coordinate
- * - Texture (u,v): Texture mapping coordinates
- * - Normal (nx,ny,nz): Surface normal for lighting calculations
- */
 void Tree::updateBranchMesh() {
     // === CLEAR PREVIOUS MESH DATA ===
     branch_vertices.clear();
@@ -493,23 +386,6 @@ void Tree::updateBranchMesh() {
     }
 }
 
-/**
- * updateLeafMesh - Generates OpenGL vertex data for all visible leaves
- * 
- * This function creates the geometric representation of leaves as textured quads.
- * Like branches, only leaves with growth_progress > 0 are included, and their
- * size scales with growth progress to create a budding animation effect.
- * 
- * === LEAF POSITIONING STRATEGY ===
- * Leaves are positioned relative to their parent branch's current end position.
- * As the parent branch grows during animation, the leaves move with it, creating
- * the realistic effect of leaves appearing at the tips of growing branches.
- * 
- * === LEAF ANIMATION ===
- * - growth_progress = 0.0: Leaf is invisible (not rendered)
- * - growth_progress = 0.5: Leaf is half-size (budding)
- * - growth_progress = 1.0: Leaf is full-size (mature)
- */
 void Tree::updateLeafMesh() {
     // === CLEAR PREVIOUS LEAF MESH DATA ===
     leaf_vertices.clear();
@@ -541,31 +417,6 @@ void Tree::updateLeafMesh() {
     }
 }
 
-/**
- * addBranchSegment - Creates cylindrical geometry for a branch segment
- * 
- * This function generates the 3D mesh data for a single branch represented
- * as a tapered cylinder. The cylinder is created by generating rings of
- * vertices at the start and end positions, then connecting them with triangles.
- * 
- * === CYLINDER GENERATION ALGORITHM ===
- * 1. Calculate coordinate system (direction, right, up vectors)
- * 2. Generate ring of vertices at start position with start_radius
- * 3. Generate ring of vertices at end position with end_radius
- * 4. Connect corresponding vertices between rings to form triangle strips
- * 5. Calculate proper normals for lighting
- * 6. Assign texture coordinates for bark texture mapping
- * 
- * === COORDINATE SYSTEM ===
- * - direction: Vector from start to end (branch growth direction)
- * - right: Perpendicular to direction (for ring generation)
- * - up: Perpendicular to both direction and right (completes coordinate system)
- * 
- * @param start Starting position of branch segment
- * @param end Ending position of branch segment  
- * @param start_radius Radius at the start (base) of segment
- * @param end_radius Radius at the end (tip) of segment
- */
 void Tree::addBranchSegment(glm::vec3 start, glm::vec3 end, float start_radius, float end_radius) {
     // === GEOMETRIC SETUP ===
     const int segments = 8;  // Number of sides around cylinder circumference
@@ -600,6 +451,8 @@ void Tree::addBranchSegment(glm::vec3 start, glm::vec3 end, float start_radius, 
         
         // === VERTEX POSITION CALCULATION ===
         // Calculate positions of 4 vertices forming a quad on cylinder surface
+        // p1 = start_center + (right_vector × cos(angle1) × radius) + (up_vector × sin(angle1) × radius)
+        // point = center + right*cos(θ)*radius + up*sin(θ)*radius
         glm::vec3 p1 = start + right * cosf(angle1) * start_radius + up * sinf(angle1) * start_radius;
         glm::vec3 p2 = start + right * cosf(angle2) * start_radius + up * sinf(angle2) * start_radius;
         glm::vec3 p3 = end + right * cosf(angle1) * end_radius + up * sinf(angle1) * end_radius;
@@ -632,32 +485,7 @@ void Tree::addBranchSegment(glm::vec3 start, glm::vec3 end, float start_radius, 
     }
 }
 
-/**
- * addLeafQuad - Creates billboard quad geometry for a single leaf
- * 
- * This function generates a textured quad to represent a leaf. The quad is
- * oriented according to the leaf's normal vector and scaled by the growth
- * parameter for animation. Each leaf is rendered as a double-sided billboard
- * so it's visible from both front and back.
- * 
- * === LEAF REPRESENTATION STRATEGY ===
- * Leaves are modeled as flat quads rather than complex 3D geometry for
- * performance reasons. The illusion of volume is created through:
- * - Proper texture with alpha channel for leaf shape
- * - Random orientations for natural variation
- * - Double-sided rendering for visibility from all angles
- * 
- * === COORDINATE SYSTEM GENERATION ===
- * From the leaf normal, we construct a local coordinate system:
- * - normal: Direction leaf is facing (toward light)
- * - right: Horizontal direction across leaf width  
- * - up: Vertical direction across leaf height
- * 
- * @param position World position of leaf center
- * @param normal Direction the leaf is facing (for lighting)
- * @param size Full size of the leaf when mature
- * @param growth Growth factor (0.0 = invisible, 1.0 = full size)
- */
+
 void Tree::addLeafQuad(glm::vec3 position, glm::vec3 normal, float size, float growth) {
     // === SIZE ANIMATION ===
     // Apply minimum size to prevent leaves from completely disappearing

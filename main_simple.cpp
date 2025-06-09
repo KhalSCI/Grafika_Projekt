@@ -107,27 +107,6 @@ void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     camera.processScrollInput(window, xoffset, yoffset);
 }
 
-// Simple render function for geometry
-void renderGeometry(const std::vector<GLfloat>& vertices, int vertexCount) {
-    if (vertices.empty() || vertexCount == 0) return;
-    int stride = 9 * sizeof(GLfloat);
-    glEnableVertexAttribArray(sp->a("vertex"));
-    glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, stride, vertices.data());
-    int texAttrib = sp->a("texcoord");
-    if (texAttrib >= 0) {
-        glEnableVertexAttribArray(texAttrib);
-        glVertexAttribPointer(texAttrib, 2, GL_FLOAT, false, stride, vertices.data() + 4);
-    }
-    int normAttrib = sp->a("normal");
-    if (normAttrib >= 0) {
-        glEnableVertexAttribArray(normAttrib);
-        glVertexAttribPointer(normAttrib, 3, GL_FLOAT, false, stride, vertices.data() + 6);
-    }
-    glDrawArrays(GL_TRIANGLES, 0, vertexCount);
-    glDisableVertexAttribArray(sp->a("vertex"));
-    if (texAttrib >= 0) glDisableVertexAttribArray(texAttrib);
-    if (normAttrib >= 0) glDisableVertexAttribArray(normAttrib);
-}
 
 // Initialization
 void initOpenGLProgram(GLFWwindow* window) {
@@ -196,7 +175,7 @@ void drawScene(GLFWwindow* window, float time) {
     glm::vec3 sunPos = glm::vec3(sun_radius * cos(sun_angle), sun_height, sun_radius * sin(sun_angle));
     glUniform3fv(sp->u("lightPos"), 1, glm::value_ptr(sunPos));
     
-    // Set up texture samplers and bind all textures at once
+   
     glUniform1i(sp->u("textureMap0"), 0); // Bark texture on unit 0
     glUniform1i(sp->u("textureMap1"), 1); // Leaf texture on unit 1
     glUniform1i(sp->u("textureMap2"), 2); // Grass texture on unit 2
