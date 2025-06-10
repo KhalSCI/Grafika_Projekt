@@ -15,7 +15,8 @@
 uniform mat4 P; // Projection matrix (3D -> 2D screen projection)
 uniform mat4 V; // View matrix (world space -> eye/camera space)
 uniform mat4 M; // Model matrix (object space -> world space)
-uniform vec3 lightPos; // Light position in world space (sun position)
+uniform vec3 lightPos; // Primary light position in world space (sun position)
+uniform vec3 torchPos; // Secondary light position in world space (torch position)
 
 //Attributes (input data per vertex)
 in vec4 vertex; // Vertex coordinates in model/object space
@@ -23,7 +24,8 @@ in vec3 normal; // Vertex normal in model/object space
 in vec2 texcoord; // Texture coordinates (UV mapping)
 
 //Varying variables (output to fragment shader, interpolated across triangle)
-out vec4 l; // Light vector in eye space (vertex -> light direction)
+out vec4 l; // Light vector in eye space (vertex -> sun direction)
+out vec4 l2; // Light vector in eye space (vertex -> torch direction)
 out vec4 n; // Normal vector in eye space (surface orientation)
 out vec4 v; // View vector in eye space (vertex -> camera direction)
 out vec2 iTexCoord0; // Primary texture coordinates (standard UV mapping)
@@ -35,17 +37,22 @@ void main(void) {
      * STEP 1: COORDINATE SPACE TRANSFORMATIONS
      * Transform positions from model space to eye space for lighting calculations
      */
-    vec4 lp = vec4(lightPos, 1.0); // Convert light position to homogeneous coordinates
+    vec4 lp = vec4(lightPos, 1.0); // Convert sun position to homogeneous coordinates
+    vec4 tp = vec4(torchPos, 1.0); // Convert torch position to homogeneous coordinates
     vec4 vertexEyeSpace = V * M * vertex; // Transform vertex: model -> world -> eye space
-    vec4 lightEyeSpace = V * lp; // Transform light position: world -> eye space
+    vec4 lightEyeSpace = V * lp; // Transform sun position: world -> eye space
+    vec4 torchEyeSpace = V * tp; // Transform torch position: world -> eye space
     
     /*
      * STEP 2: LIGHTING VECTOR CALCULATIONS (in eye space)
      * All vectors point FROM the surface vertex TOWARDS their target
      */
     
-    // Light vector: direction from vertex towards light source
+    // Light vector: direction from vertex towards sun light source
     l = normalize(lightEyeSpace - vertexEyeSpace);
+    
+    // Light vector: direction from vertex towards torch light source
+    l2 = normalize(torchEyeSpace - vertexEyeSpace);
     
     // View vector: direction from vertex towards camera (camera is at origin in eye space)
     v = normalize(vec4(0, 0, 0, 1) - vertexEyeSpace);

@@ -1,4 +1,5 @@
 /*
+/*
 Simple Tree Generation Demo
 Stripped down to focus only on tree generation logic.
 */
@@ -33,6 +34,7 @@ GLuint barkTex;
 GLuint leafTex;
 GLuint grassTex;
 GLuint sunTex;
+GLuint torchTex;
 
 // Custom ground normals - all pointing up for proper lighting
 float groundNormals[] = {
@@ -49,6 +51,60 @@ float groundNormals[] = {
     0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 10
     0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  // Triangle 11
     0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f   // Triangle 12
+};
+
+// Custom torch texture coordinates - matching exact cube structure with proper UV mapping
+float torchTexCoords[] = {
+    // Wall 1 (Front face Z-) 
+    0.0f, 0.0f,  1.0f, 1.0f,  1.0f, 0.0f,  // Triangle 1: bottom-right, top-left, bottom-left
+    0.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f,  // Triangle 2: bottom-right, top-right, top-left
+
+    // Wall 2 (Back face Z+)
+    0.0f, 0.0f,  1.0f, 1.0f,  1.0f, 0.0f,  // Triangle 1
+    0.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f,  // Triangle 2
+
+    // Wall 3 (Bottom face Y-)
+    0.0f, 0.0f,  1.0f, 1.0f,  1.0f, 0.0f,  // Triangle 1
+    0.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f,  // Triangle 2
+
+    // Wall 4 (Top face Y+)
+    0.0f, 0.0f,  1.0f, 1.0f,  1.0f, 0.0f,  // Triangle 1
+    0.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f,  // Triangle 2
+
+    // Wall 5 (Left face X-)
+    0.0f, 0.0f,  1.0f, 1.0f,  1.0f, 0.0f,  // Triangle 1
+    0.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f,  // Triangle 2
+
+    // Wall 6 (Right face X+)
+    0.0f, 0.0f,  1.0f, 1.0f,  1.0f, 0.0f,  // Triangle 1
+    0.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f   // Triangle 2
+};
+
+// Custom torch normals - properly oriented for lighting calculations
+float torchNormals[] = {
+    // Wall 1 (Front face Z-)
+    0.0f, 0.0f, -1.0f,  0.0f, 0.0f, -1.0f,  0.0f, 0.0f, -1.0f,  // Triangle 1
+    0.0f, 0.0f, -1.0f,  0.0f, 0.0f, -1.0f,  0.0f, 0.0f, -1.0f,  // Triangle 2
+
+    // Wall 2 (Back face Z+)
+    0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 1.0f,   // Triangle 1
+    0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 1.0f,   // Triangle 2
+
+    // Wall 3 (Bottom face Y-)
+    0.0f, -1.0f, 0.0f,  0.0f, -1.0f, 0.0f,  0.0f, -1.0f, 0.0f,  // Triangle 1
+    0.0f, -1.0f, 0.0f,  0.0f, -1.0f, 0.0f,  0.0f, -1.0f, 0.0f,  // Triangle 2
+
+    // Wall 4 (Top face Y+)
+    0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   // Triangle 1
+    0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   // Triangle 2
+
+    // Wall 5 (Left face X-)
+    -1.0f, 0.0f, 0.0f,  -1.0f, 0.0f, 0.0f,  -1.0f, 0.0f, 0.0f,  // Triangle 1
+    -1.0f, 0.0f, 0.0f,  -1.0f, 0.0f, 0.0f,  -1.0f, 0.0f, 0.0f,  // Triangle 2
+
+    // Wall 6 (Right face X+)
+    1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,   // Triangle 1
+    1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 0.0f    // Triangle 2
 };
 
 GLuint readTexture(const char* filename) {
@@ -126,6 +182,7 @@ void initOpenGLProgram(GLFWwindow* window) {
     leafTex = readTexture("leaf.png");
     grassTex = readTexture("grass3.png");
     sunTex = readTexture("sun_yellow.png");
+    torchTex = readTexture("torch2.png");
 }
 
 // Cleanup
@@ -175,11 +232,17 @@ void drawScene(GLFWwindow* window, float time) {
     glm::vec3 sunPos = glm::vec3(sun_radius * cos(sun_angle), sun_height, sun_radius * sin(sun_angle));
     glUniform3fv(sp->u("lightPos"), 1, glm::value_ptr(sunPos));
     
+    // --- STATIC TORCH LIGHT ON GROUND ---
+    glm::vec3 torchPos = glm::vec3(3.0f, 0.5f, 2.0f); // Fixed position on ground
+    glm::vec3 torchLightPos = glm::vec3(3.0f, 1.0f, 2.2f); // Light source slightly above and in front of torch
+    glUniform3fv(sp->u("torchPos"), 1, glm::value_ptr(torchLightPos));
+    
    
     glUniform1i(sp->u("textureMap0"), 0); // Bark texture on unit 0
     glUniform1i(sp->u("textureMap1"), 1); // Leaf texture on unit 1
     glUniform1i(sp->u("textureMap2"), 2); // Grass texture on unit 2
     glUniform1i(sp->u("textureMap3"), 3); // Sun texture on unit 3
+    glUniform1i(sp->u("textureMap4"), 4); // Torch texture on unit 4
     
     // Bind all textures at once for all objects
     glActiveTexture(GL_TEXTURE0);
@@ -190,11 +253,14 @@ void drawScene(GLFWwindow* window, float time) {
     glBindTexture(GL_TEXTURE_2D, grassTex);
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, sunTex);
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, torchTex);
     
     // Debug: Print sun position and light position every second
     static double lastSunDebug = 0.0;
     if (currentTime - lastSunDebug > 1.0) {
-        printf("[DEBUG] SunPos: (%.2f, %.2f, %.2f)\n", sunPos.x, sunPos.y, sunPos.z);
+        printf("[DEBUG] SunPos: (%.2f, %.2f, %.2f), TorchPos: (%.2f, %.2f, %.2f)\n", 
+               sunPos.x, sunPos.y, sunPos.z, torchPos.x, torchPos.y, torchPos.z);
         lastSunDebug = currentTime;
     }
     // --- END MOVING SUN LIGHT ---
@@ -206,6 +272,8 @@ void drawScene(GLFWwindow* window, float time) {
     glUniform1i(sp->u("useLeafTex"), 0);
     glUniform1i(sp->u("useGroundTex"), 0);
     glUniform1i(sp->u("useSunTex"), 1); // Use sun texture
+    glUniform1i(sp->u("useTorchTex"), 0); // Not using torch texture
+    glUniform1i(sp->u("useTorchTex"), 0); // Not using torch texture
     
     int sunPosAttrib = sp->a("vertex");
     int sunTexAttrib = sp->a("texcoord");
@@ -229,6 +297,38 @@ void drawScene(GLFWwindow* window, float time) {
     glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
     // --- END DRAW SUN CUBE ---
 
+    // --- DRAW TORCH (MODERN OPENGL) ---
+    glm::mat4 torchModel = glm::translate(glm::mat4(1.0f), torchPos) * 
+                          glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.5f, 0.2f)); // Tall, thin torch
+    glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(torchModel));
+    glUniform1i(sp->u("useBarkTex"), 0);
+    glUniform1i(sp->u("useLeafTex"), 0);
+    glUniform1i(sp->u("useGroundTex"), 0);
+    glUniform1i(sp->u("useSunTex"), 0); // Not using sun texture
+    glUniform1i(sp->u("useTorchTex"), 1); // Use torch texture
+    
+    int torchPosAttrib = sp->a("vertex");
+    int torchTexAttrib = sp->a("texcoord");
+    int torchNormAttrib = sp->a("normal");
+    if (torchPosAttrib >= 0) {
+        glEnableVertexAttribArray(torchPosAttrib);
+        glVertexAttribPointer(torchPosAttrib, 4, GL_FLOAT, false, 0, myCubeVertices);
+    }
+    if (torchTexAttrib >= 0) {
+        glEnableVertexAttribArray(torchTexAttrib);
+        glVertexAttribPointer(torchTexAttrib, 2, GL_FLOAT, false, 0, myCubeTexCoords);
+    }
+    if (torchNormAttrib >= 0) {
+        glEnableVertexAttribArray(torchNormAttrib);
+        glVertexAttribPointer(torchNormAttrib, 3, GL_FLOAT, false, 0, torchNormals);
+    }
+    glDrawArrays(GL_TRIANGLES, 0, myCubeVertexCount);
+    if (torchPosAttrib >= 0) glDisableVertexAttribArray(torchPosAttrib);
+    if (torchTexAttrib >= 0) glDisableVertexAttribArray(torchTexAttrib);
+    if (torchNormAttrib >= 0) glDisableVertexAttribArray(torchNormAttrib);
+    glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+    // --- END DRAW TORCH ---
+
     
     glm::mat4 groundModel = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -2.0f, 0.0f))
         * glm::scale(glm::mat4(1.0f), glm::vec3(8.0f, 2.0f, 8.0f));
@@ -237,6 +337,8 @@ void drawScene(GLFWwindow* window, float time) {
     glUniform1i(sp->u("useLeafTex"), 0);
     glUniform1i(sp->u("useGroundTex"), 1); // Use ground texture
     glUniform1i(sp->u("useSunTex"), 0); // Not using sun texture
+    glUniform1i(sp->u("useTorchTex"), 0); // Not using torch texture
+    glUniform1i(sp->u("useTorchTex"), 0); // Not using torch texture
     int groundPosAttrib = sp->a("vertex");
     int groundTexAttrib = sp->a("texcoord");
     int groundNormAttrib = sp->a("normal");
@@ -264,6 +366,8 @@ void drawScene(GLFWwindow* window, float time) {
     glUniform1i(sp->u("useLeafTex"), 0); // Not using leaf texture
     glUniform1i(sp->u("useGroundTex"), 0); // Not using ground texture
     glUniform1i(sp->u("useSunTex"), 0); // Not using sun texture
+    glUniform1i(sp->u("useTorchTex"), 0); // Not using torch texture
+    glUniform1i(sp->u("useTorchTex"), 0); // Not using torch texture
     // Set up attributes: position (4), texcoord (2), normal (3)
     const std::vector<GLfloat>& branchVerts = tree.getBranchVertices();
     int stride = 9 * sizeof(GLfloat);
@@ -292,6 +396,8 @@ void drawScene(GLFWwindow* window, float time) {
     glUniform1i(sp->u("useLeafTex"), 1);
     glUniform1i(sp->u("useGroundTex"), 0);
     glUniform1i(sp->u("useSunTex"), 0); // Not using sun texture
+    glUniform1i(sp->u("useTorchTex"), 0); // Not using torch texture
+    glUniform1i(sp->u("useTorchTex"), 0); // Not using torch texture
     const std::vector<GLfloat>& leafVerts = tree.getLeafVertices();
     if (posAttrib >= 0) {
         glEnableVertexAttribArray(posAttrib);
