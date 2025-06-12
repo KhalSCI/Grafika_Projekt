@@ -9,12 +9,12 @@ Tree::Tree() {
     // === TIMING PARAMETERS ===
     // Total duration for complete tree growth animation (in seconds)
     // This controls how long it takes for the entire tree to fully grow
-    max_growth_time = 10.0f;  // 10 seconds total growth time
+    max_growth_time = 5.0f;  // 10 seconds total growth time
     current_growth_time = 0.0f;
     max_generations = 6;
     branch_angle_variance = 45.0f; // Degrees of variance for branch angles
     // How much shorter each generation of branches becomes
-    length_reduction_factor = 0.7f;  
+    length_reduction_factor = 0.8f;  
     // How much thinner each generation of branches becomes
     radius_reduction_factor = 0.7f;
 }

@@ -237,7 +237,6 @@ void drawScene(GLFWwindow* window, float time) {
     glm::vec3 torchLightPos = glm::vec3(3.0f, 1.0f, 2.2f); // Light source slightly above and in front of torch
     glUniform3fv(sp->u("torchPos"), 1, glm::value_ptr(torchLightPos));
     
-   
     glUniform1i(sp->u("textureMap0"), 0); // Bark texture on unit 0
     glUniform1i(sp->u("textureMap1"), 1); // Leaf texture on unit 1
     glUniform1i(sp->u("textureMap2"), 2); // Grass texture on unit 2
